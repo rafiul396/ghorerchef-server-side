@@ -40,8 +40,6 @@ async function run() {
             res.send(result);
         });
 
-
-
         //Post users data
         app.post("/users", async (req, res) => {
             const users = req.body;
