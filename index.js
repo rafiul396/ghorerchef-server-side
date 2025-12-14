@@ -23,12 +23,24 @@ async function run() {
         const db = client.db('ghorerChefDB');
         const userCollection = db.collection("users")
 
-        //get users data
+        //get all user data for admin
         app.get("/users", async (req, res) => {
             const cursor = userCollection.find();
-            const result = await cursor.toArray();
-            res.send(result)
-        })
+            const result = await cursor.toArray()
+            res.send(result);
+        });
+
+        //get single users data
+        app.get("/users/:email", async (req, res) => {
+            const email = req.params.email;
+            
+            const query = { userEmail: email }
+            
+            const result = await userCollection.findOne(query);
+            res.send(result);
+        });
+
+
 
         //Post users data
         app.post("/users", async (req, res) => {
