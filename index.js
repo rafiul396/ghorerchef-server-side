@@ -33,6 +33,9 @@ async function run() {
         //Post users data
         app.post("/users", async (req, res) => {
             const users = req.body;
+            users.userRole = "user"
+            users.userStatus = "active"
+            users.createdAt = new Date()
             const result = await userCollection.insertOne(users)
             res.send(result)
         })
