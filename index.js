@@ -20,6 +20,22 @@ async function run() {
     try {
 
         // Create Database and Collection
+        const db = client.db('ghorerChefDB');
+        const userCollection = db.collection("users")
+
+        //get users data
+        app.get("/users", async (req, res) => {
+            const cursor = userCollection.find();
+            const result = await cursor.toArray();
+            res.send(result)
+        })
+
+        //Post users data
+        app.post("/users", async (req, res) => {
+            const users = req.body;
+            const result = await userCollection.insertOne(users)
+            res.send(result)
+        })
 
         // Get all plants by fetching this API
 
