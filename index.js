@@ -103,10 +103,18 @@ async function run() {
 
         //get requests
         app.get("/requests", async (req, res) => {
-            const cursor = requestCollection.find();
-            const result = await cursor.toArray();
-            res.send(result);
-        })
+            try {
+                const result = await requestCollection
+                    .find()
+                    .sort({ requestTime: -1 }) // 🔥 latest first
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch requests" });
+            }
+        });
+
 
 
 
