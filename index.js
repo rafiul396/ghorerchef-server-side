@@ -189,6 +189,35 @@ async function run() {
             }
         });
 
+        // app.post("/requests", async (req, res) => {
+        //     try {
+        //         const { userEmail, requestType } = req.body;
+
+        //         const existing = await requestCollection.findOne({
+        //             userEmail,
+        //             requestStatus: "pending",
+        //         });
+
+        //         if (existing) {
+        //             return res.status(400).send({
+        //                 message: "Request already pending",
+        //             });
+        //         }
+
+        //         const request = {
+        //             ...req.body,
+        //             requestStatus: "pending",
+        //             requestTime: new Date(),
+        //         };
+
+        //         const result = await requestCollection.insertOne(request);
+        //         res.send(result);
+        //     } catch (err) {
+        //         res.status(500).send({ message: "Request failed" });
+        //     }
+        // });
+
+
 
 
         //updated meals data by chef
