@@ -211,7 +211,7 @@ async function run() {
                 const chefId = "chef-" + Math.floor(1000 + Math.random() * 9000);
 
                 await userCollection.updateOne(
-                    { email: request.userEmail },
+                    { userEmail: request.userEmail },
                     {
                         $set: {
                             userRole: "chef",
@@ -223,7 +223,7 @@ async function run() {
 
             if (request.requestType === "admin") {
                 await userCollection.updateOne(
-                    { email: request.userEmail },
+                    { userEmail: request.userEmail },
                     { $set: { userRole: "admin" } }
                 );
             }
