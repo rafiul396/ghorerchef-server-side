@@ -196,6 +196,59 @@ async function run() {
             res.send({ success: true, result });
         });
 
+        //updated user role by admin
+        //request reject
+        app.patch("/requests/accept/:id", async (req, res) => {
+            const { id } = req.params;
+            const request = await requestCollection.findOne({ _id: new ObjectId(id) });
+
+            if (!request) {
+                return res.status(404).send({ message: "Request not found" });
+            }
+
+            // role update
+            if (request.requestType === "chef") {
+                const chefId = "chef-" + Math.floor(1000 + Math.random() * 9000);
+
+                await userCollection.updateOne(
+                    { email: request.userEmail },
+                    {
+                        $set: {
+                            userRole: "chef",
+                            chefId: chefId,
+                        },
+                    }
+                );
+            }
+
+            if (request.requestType === "admin") {
+                await userCollection.updateOne(
+                    { email: request.userEmail },
+                    { $set: { userRole: "admin" } }
+                );
+            }
+
+            // request status update
+            await requestCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { requestStatus: "approved" } }
+            );
+
+            res.send({ success: true });
+        });
+
+        //request reject
+        app.patch("/requests/reject/:id", async (req, res) => {
+            const { id } = req.params;
+
+            await requestCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { requestStatus: "rejected" } }
+            );
+
+            res.send({ success: true });
+        });
+
 
         //delete meals by chef
         app.delete("/meals/:id", async (req, res) => {
