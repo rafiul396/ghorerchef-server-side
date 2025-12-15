@@ -22,11 +22,12 @@ async function run() {
         // Create Database and Collection
         const db = client.db('ghorerChefDB');
         const userCollection = db.collection("users")
+        const mealsCollection = db.collection("meals")
 
         //get all user data for admin
         app.get("/users", async (req, res) => {
             const cursor = userCollection.find();
-            const result = await cursor.toArray()
+            const result = await cursor.toArray();
             res.send(result);
         });
 
@@ -48,6 +49,14 @@ async function run() {
             users.createdAt = new Date()
             const result = await userCollection.insertOne(users)
             res.send(result)
+        })
+
+        //chef can post her meals
+        app.post("/meals", async (req, res) => {
+            const meals = req.body;
+            meals.createdAt = new Date();
+            const result = await mealsCollection.insertOne(meals);
+            res.send(result);
         })
 
         // Get all plants by fetching this API
