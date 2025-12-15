@@ -24,6 +24,7 @@ async function run() {
         const userCollection = db.collection("users")
         const mealsCollection = db.collection("meals")
         const orderCollection = db.collection("orders")
+        const requestCollection = db.collection("requests")
 
         //get all user data for admin
         app.get("/users", async (req, res) => {
@@ -79,6 +80,28 @@ async function run() {
             }
         });
 
+        //get orders
+        app.get("/orders", async (req, res) => {
+            try {
+                const email = req.query.email;
+
+                if (!email) {
+                    return res.status(400).send({ message: "Email query is required" });
+                }
+
+                const orders = await orderCollection
+                    .find({ userEmail: email })
+                    .sort({ orderTime: -1 }) // latest first (optional)
+                    .toArray();
+
+                res.send(orders);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch orders" });
+            }
+        });
+
+
 
         //Post users data
         app.post("/users", async (req, res) => {
@@ -96,7 +119,7 @@ async function run() {
                 const meals = req.body;
                 const totalPrice = Number(meals.foodPrice) * Number(meals.quantity);
                 meals.price = totalPrice
-                
+
                 const result = await orderCollection.insertOne(meals);
 
                 res.send(result);
@@ -114,6 +137,44 @@ async function run() {
             const result = await mealsCollection.insertOne(meals);
             res.send(result);
         })
+
+        //post requests
+        app.post("/requests", async (req, res) => {
+            try {
+                const { userEmail, requestType } = req.body;
+
+                // check existing pending request
+                const existingRequest = await requestCollection.findOne({
+                    userEmail,
+                    requestType,
+                    requestStatus: "pending",
+                });
+
+                if (existingRequest) {
+                    return res.status(400).send({
+                        message: "You already have a pending request",
+                    });
+                }
+
+                const request = {
+                    ...req.body,
+                    requestStatus: "pending",
+                    requestTime: new Date(),
+                };
+
+                const result = await requestCollection.insertOne(request);
+
+                res.send({
+                    success: true,
+                    message: "Request submitted successfully",
+                    result,
+                });
+            } catch (err) {
+                res.status(500).send({ message: "Request failed" });
+            }
+        });
+
+
 
         //updated meals data by chef
         app.put("/meals/:id", async (req, res) => {
