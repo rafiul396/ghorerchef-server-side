@@ -101,6 +101,13 @@ async function run() {
             }
         });
 
+        //get requests
+        app.get("/requests", async (req, res) => {
+            const cursor = requestCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
 
 
         //Post users data
