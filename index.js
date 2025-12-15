@@ -23,6 +23,7 @@ async function run() {
         const db = client.db('ghorerChefDB');
         const userCollection = db.collection("users")
         const mealsCollection = db.collection("meals")
+        const orderCollection = db.collection("orders")
 
         //get all user data for admin
         app.get("/users", async (req, res) => {
@@ -58,6 +59,26 @@ async function run() {
             }
         });
 
+        //get meal
+        app.get("/meals/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                const meal = await mealsCollection.findOne({
+                    _id: new ObjectId(id),
+                });
+
+                if (!meal) {
+                    return res.status(404).send({ message: "Meal not found" });
+                }
+
+                res.send(meal);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch meal details" });
+            }
+        });
+
 
         //Post users data
         app.post("/users", async (req, res) => {
@@ -68,6 +89,23 @@ async function run() {
             const result = await userCollection.insertOne(users)
             res.send(result)
         })
+
+        //post order
+        app.post("/orders", async (req, res) => {
+            try {
+                const meals = req.body;
+                const totalPrice = Number(meals.foodPrice) * Number(meals.quantity);
+                meals.price = totalPrice
+                
+                const result = await orderCollection.insertOne(meals);
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to place order" });
+            }
+        });
+
 
         //chef can post her meals
         app.post("/meals", async (req, res) => {
