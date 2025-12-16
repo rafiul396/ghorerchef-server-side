@@ -119,15 +119,27 @@ async function run() {
         //get revews
         app.get("/reviews", async (req, res) => {
             try {
-                const { foodId } = req.query;
+                const { foodId, email } = req.query;
 
-                if (!foodId) {
-                    return res.status(400).send({ message: "mealId is required" });
+                let query = {};
+
+                if (foodId) {
+                    query.foodId = foodId;
+                }
+
+                else if (email) {
+                    query.reviewerEmail = email;
+                }
+
+                else {
+                    return res.status(400).send({
+                        message: "foodId or email is required",
+                    });
                 }
 
                 const reviews = await reviewCollection
-                    .find({ foodId })
-                    .sort({ createdAt: -1 }) // latest review first (optional)
+                    .find(query)
+                    .sort({ createdAt: -1 })
                     .toArray();
 
                 res.send(reviews);
@@ -136,6 +148,7 @@ async function run() {
                 res.status(500).send({ message: "Failed to fetch reviews" });
             }
         });
+
 
         //Post users data
         app.post("/users", async (req, res) => {
@@ -264,6 +277,7 @@ async function run() {
             try {
                 const {
                     foodId,
+                    mealName,
                     reviewerEmail,
                     reviewerName,
                     reviewerImage,
@@ -283,6 +297,7 @@ async function run() {
 
                 const review = {
                     foodId,
+                    mealName,
                     reviewerEmail,
                     reviewerName,
                     reviewerImage,
@@ -416,6 +431,26 @@ async function run() {
                 });
             }
         });
+
+        //delete review
+        app.delete("/reviews/:id", async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                const result = await reviewCollection.deleteOne({
+                    _id: new ObjectId(id),
+                });
+
+                if (result.deletedCount === 0) {
+                    return res.status(404).send({ message: "Review not found" });
+                }
+
+                res.send({ success: true, message: "Review deleted successfully" });
+            } catch (error) {
+                res.status(500).send({ message: "Failed to delete review" });
+            }
+        });
+
 
         // Get all plants by fetching this API
 
