@@ -116,8 +116,26 @@ async function run() {
             }
         });
 
+        //get revews
+        app.get("/reviews", async (req, res) => {
+            try {
+                const { foodId } = req.query;
 
+                if (!foodId) {
+                    return res.status(400).send({ message: "mealId is required" });
+                }
 
+                const reviews = await reviewCollection
+                    .find({ foodId })
+                    .sort({ createdAt: -1 }) // latest review first (optional)
+                    .toArray();
+
+                res.send(reviews);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch reviews" });
+            }
+        });
 
         //Post users data
         app.post("/users", async (req, res) => {
@@ -219,17 +237,69 @@ async function run() {
         // });
 
         //post reviews
+        // app.post("/reviews", async (req, res) => {
+        //     try {
+        //         const review = req.body;
+        //         review.createdAt = new Date();
+
+        //         const existingReview = await reviewCollection.findOne({
+        //             foodId,
+        //             reviewerEmail,
+        //         });
+
+        //         if (existingReview) {
+        //             return res.status(409).send({
+        //                 message: "You have already reviewed this meal",
+        //             });
+        //         }
+
+        //         const result = await reviewCollection.insertOne(review);
+        //         res.send({ success: true, result });
+        //     } catch (error) {
+        //         res.status(500).send({ message: "Failed to submit review" });
+        //     }
+        // });
+
         app.post("/reviews", async (req, res) => {
             try {
-                const review = req.body;
-                review.createdAt = new Date();
+                const {
+                    foodId,
+                    reviewerEmail,
+                    reviewerName,
+                    reviewerImage,
+                    rating,
+                    comment,
+                } = req.body;
+                const existingReview = await reviewCollection.findOne({
+                    foodId,
+                    reviewerEmail,
+                });
+
+                if (existingReview) {
+                    return res.status(409).send({
+                        message: "You’ve already reviewed this meal. Manage your review from your dashboard.",
+                    });
+                }
+
+                const review = {
+                    foodId,
+                    reviewerEmail,
+                    reviewerName,
+                    reviewerImage,
+                    rating: Number(rating),
+                    comment,
+                    createdAt: new Date(),
+                };
 
                 const result = await reviewCollection.insertOne(review);
+
                 res.send({ success: true, result });
             } catch (error) {
+                console.error(error);
                 res.status(500).send({ message: "Failed to submit review" });
             }
         });
+
 
 
 
