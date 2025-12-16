@@ -405,6 +405,34 @@ async function run() {
             res.send({ success: true });
         });
 
+        //update review
+        app.patch("/reviews/:id", async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { rating, comment } = req.body;
+
+                const result = await reviewCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: {
+                            rating: Number(rating),
+                            comment,
+                            updatedAt: new Date(),
+                        },
+                    }
+                );
+
+                if (result.matchedCount === 0) {
+                    return res.status(404).send({ message: "Review not found" });
+                }
+
+                res.send({ success: true, message: "Review updated successfully" });
+            } catch (error) {
+                res.status(500).send({ message: "Failed to update review" });
+            }
+        });
+
+
 
         //delete meals by chef
         app.delete("/meals/:id", async (req, res) => {
