@@ -25,6 +25,7 @@ async function run() {
         const mealsCollection = db.collection("meals")
         const orderCollection = db.collection("orders")
         const requestCollection = db.collection("requests")
+        const reviewCollection = db.collection("reviews")
 
         //get all user data for admin
         app.get("/users", async (req, res) => {
@@ -216,6 +217,20 @@ async function run() {
         //         res.status(500).send({ message: "Request failed" });
         //     }
         // });
+
+        //post reviews
+        app.post("/reviews", async (req, res) => {
+            try {
+                const review = req.body;
+                review.createdAt = new Date();
+
+                const result = await reviewCollection.insertOne(review);
+                res.send({ success: true, result });
+            } catch (error) {
+                res.status(500).send({ message: "Failed to submit review" });
+            }
+        });
+
 
 
 
