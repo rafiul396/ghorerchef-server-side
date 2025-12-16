@@ -274,6 +274,25 @@ async function run() {
             res.send({ success: true });
         });
 
+        //change user status active to fraud
+        app.patch("/users/fraud/:id", async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                const result = await userCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: { userStatus: "fraud" }
+                    }
+                );
+
+                res.send({ success: true });
+            } catch (error) {
+                res.status(500).send({ message: "Failed to mark user as fraud" });
+            }
+        });
+
+
         //request reject
         app.patch("/requests/reject/:id", async (req, res) => {
             const { id } = req.params;
