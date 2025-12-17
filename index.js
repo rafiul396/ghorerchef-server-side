@@ -150,6 +150,27 @@ async function run() {
             }
         });
 
+        //get favorite data
+        app.get("/favorites", async (req, res) => {
+            try {
+                const { email } = req.query;
+
+                if (!email) {
+                    return res.status(400).send({ message: "Email is required" });
+                }
+
+                const favorites = await favoriteCollection
+                    .find({ userEmail: email })
+                    .sort({ createdAt: -1 })
+                    .toArray();
+
+                res.send(favorites);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch favorites" });
+            }
+        });
+
+
 
         //Post users data
         app.post("/users", async (req, res) => {
@@ -502,10 +523,20 @@ async function run() {
             }
         });
 
+        //delete favorite data
+        app.delete("/favorites/:id", async (req, res) => {
+            try {
+                const { id } = req.params;
 
-        // Get all plants by fetching this API
+                const result = await favoriteCollection.deleteOne({
+                    _id: new ObjectId(id),
+                });
 
-        // Get single plant to fatche this API
+                res.send({ success: true, deletedCount: result.deletedCount });
+            } catch (err) {
+                res.status(500).send({ message: "Failed to delete favorite" });
+            }
+        });
 
         // Setup payment getway system using stripe
 
