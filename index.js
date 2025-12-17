@@ -18,7 +18,6 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 })
 async function run() {
     try {
-
         // Create Database and Collection
         const db = client.db('ghorerChefDB');
         const userCollection = db.collection("users")
@@ -62,7 +61,22 @@ async function run() {
             }
         });
 
-        //get meal
+        //get top 6 data by review
+        app.get("/meals/top-rated", async (req, res) => {
+            try {
+                const result = await mealsCollection
+                    .find()
+                    .sort({ rating: -1 })
+                    .limit(6)
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch top rated meals" });
+            }
+        });
+
+        //get single meal data
         app.get("/meals/:id", async (req, res) => {
             try {
                 const id = req.params.id;
@@ -93,7 +107,7 @@ async function run() {
 
                 const orders = await orderCollection
                     .find({ userEmail: email })
-                    .sort({ orderTime: -1 }) // latest first (optional)
+                    .sort({ orderTime: -1 })
                     .toArray();
 
                 res.send(orders);
