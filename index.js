@@ -26,6 +26,7 @@ async function run() {
         const orderCollection = db.collection("orders")
         const requestCollection = db.collection("requests")
         const reviewCollection = db.collection("reviews")
+        const favoriteCollection = db.collection("favorites")
 
         //get all user data for admin
         app.get("/users", async (req, res) => {
@@ -315,6 +316,28 @@ async function run() {
             }
         });
 
+        //post favorite meals
+        app.post("/favorites", async (req, res) => {
+            try {
+                const { userEmail, mealId } = req.body;
+
+                const exists = await favoriteCollection.findOne({ userEmail, mealId });
+                if (exists) {
+                    return res.status(409).send({ message: "Already added to favorite" });
+                }
+
+                const favorite = {
+                    ...req.body,
+                    createdAt: new Date(),
+                };
+
+                const result = await favoriteCollection.insertOne(favorite);
+                res.send({ success: true, result });
+
+            } catch (error) {
+                res.status(500).send({ message: "Failed to add favorite" });
+            }
+        });
 
 
 
