@@ -117,7 +117,7 @@ async function run() {
             }
         });
 
-        //get revews
+        //get reviews
         app.get("/reviews", async (req, res) => {
             try {
                 const { foodId, email } = req.query;
@@ -169,6 +169,27 @@ async function run() {
                 res.status(500).send({ message: "Failed to fetch favorites" });
             }
         });
+
+        //get favorite count for single food
+        app.get("/favorites/count", async (req, res) => {
+            try {
+                const { mealId } = req.query;
+
+                if (!mealId) {
+                    return res.status(400).send({ message: "mealId is required" });
+                }
+
+                const count = await favoriteCollection.countDocuments({
+                    mealId: mealId,
+                });
+
+                res.send({ count });
+            } catch (error) {
+                res.status(500).send({ message: "Failed to get favorite count" });
+            }
+        });
+
+
 
 
 
