@@ -164,6 +164,22 @@ async function run() {
             }
         });
 
+        //get all reviews
+        app.get("/reviews/all", async (req, res) => {
+            try {
+                const reviews = await reviewCollection
+                    .find()
+                    .sort({ createdAt: -1 }) // নতুন রিভিউ আগে
+                    .toArray();
+
+                res.send(reviews);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch all reviews" });
+            }
+        });
+
+
         //get favorite data
         app.get("/favorites", async (req, res) => {
             try {
