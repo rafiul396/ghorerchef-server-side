@@ -122,7 +122,7 @@ async function run() {
             try {
                 const result = await requestCollection
                     .find()
-                    .sort({ requestTime: -1 }) // 🔥 latest first
+                    .sort({ requestTime: -1 })
                     .toArray();
 
                 res.send(result);
@@ -169,7 +169,7 @@ async function run() {
             try {
                 const reviews = await reviewCollection
                     .find()
-                    .sort({ createdAt: -1 }) // নতুন রিভিউ আগে
+                    .sort({ createdAt: -1 })
                     .toArray();
 
                 res.send(reviews);
