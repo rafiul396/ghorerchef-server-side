@@ -96,7 +96,7 @@ async function run() {
             }
         });
 
-        //get orders
+        //get orders by user email
         app.get("/orders", async (req, res) => {
             try {
                 const email = req.query.email;
@@ -116,6 +116,28 @@ async function run() {
                 res.status(500).send({ message: "Failed to fetch orders" });
             }
         });
+
+        //get order by chefId
+        app.get("/orders/chef", async (req, res) => {
+            try {
+                const { chefId } = req.query;
+
+                if (!chefId) {
+                    return res.status(400).send({ message: "chefId query is required" });
+                }
+
+                const orders = await orderCollection
+                    .find({ chefId })
+                    .sort({ orderTime: -1 }) // latest order first
+                    .toArray();
+
+                res.send(orders);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch chef orders" });
+            }
+        });
+
 
         //get requests
         app.get("/requests", async (req, res) => {
@@ -263,7 +285,6 @@ async function run() {
             try {
                 const { userEmail, requestType } = req.body;
 
-                // check existing pending request
                 const existingRequest = await requestCollection.findOne({
                     userEmail,
                     requestType,
@@ -528,6 +549,34 @@ async function run() {
         });
 
 
+        //updated order status by chef
+        app.patch("/orders/:id/status", async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { status } = req.body;
+
+                const allowedStatus = ["cancelled", "accepted", "delivered"];
+                if (!allowedStatus.includes(status)) {
+                    return res.status(400).send({ message: "Invalid status" });
+                }
+
+                const result = await orderCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: {
+                            orderStatus: status,
+                            updatedAt: new Date(),
+                            ...(status === "delivered" && { paymentStatus: "paid" })
+                        }
+                    }
+                );
+
+                res.send({ success: true });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to update order status" });
+            }
+        });
 
         //delete meals by chef
         app.delete("/meals/:id", async (req, res) => {
