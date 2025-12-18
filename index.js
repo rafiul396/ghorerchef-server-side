@@ -27,6 +27,7 @@ async function run() {
         const requestCollection = db.collection("requests")
         const reviewCollection = db.collection("reviews")
         const favoriteCollection = db.collection("favorites")
+        const paymentCollection = db.collection("payments")
 
         //get all user data for admin
         app.get("/users", async (req, res) => {
@@ -649,7 +650,7 @@ async function run() {
                             currency: "usd",
                             product_data: {
                                 name: paymentInfo?.mealName,
-                            }, 
+                            },
                             unit_amount: paymentInfo?.price * 100,
                         },
                         quantity: paymentInfo?.quantity,
@@ -659,12 +660,48 @@ async function run() {
                 customer_email: paymentInfo?.customer?.email,
                 metadata: {
                     mealId: paymentInfo?.mealId,
-                    customerName: paymentInfo?.customer.email
+                    customer: paymentInfo?.customer.email
                 },
                 success_url: `${process.env.CLIENT_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.CLIENT_DOMAIN}/dashboard/payment-cancel`,
             })
             res.send({ url: session.url })
+        })
+
+        // payment endpoint
+        app.post('/payment-success', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+            const meal = await orderCollection.findOne({
+                _id: new ObjectId(session.metadata.mealId)
+            })
+
+            const checkDuplicatePayment = await paymentCollection.findOne({
+                transactionId: session.payment_intent
+            })
+
+            if (session.status === 'complete' && meal && !checkDuplicatePayment) {
+                const payInfo = {
+                    mealId: session.metadata.mealId,
+                    transactionId: session.payment_intent,
+                    customer: session.metadata.customer,
+                    chef: meal?.chefName,
+                    foodName: meal.mealName,
+                    price: session.amount_total / 100,
+                }
+                const result = await paymentCollection.insertOne(payInfo)
+
+                await orderCollection.updateOne(
+                    { _id: new ObjectId(session.metadata.mealId) },
+                    {
+                        $set: {
+                            paymentStatus: "paid",
+                            paymentTime: new Date(),
+                        },
+                    }
+                );
+            }
         })
 
         // Send a ping to confirm a successful connection
@@ -684,5 +721,4 @@ app.get("/", async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Running port is ${port}`);
-
 })
