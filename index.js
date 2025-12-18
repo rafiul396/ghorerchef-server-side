@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const cors = require('cors')
 const app = express()
 const port = process.env.PORT || 3000
@@ -639,6 +640,32 @@ async function run() {
         });
 
         // Setup payment getway system using stripe
+        app.post("/create-checkout-session", async (req, res) => {
+            const paymentInfo = req.body;
+            const session = await stripe.checkout.sessions.create({
+                line_items: [
+                    {
+                        price_data: {
+                            currency: "usd",
+                            product_data: {
+                                name: paymentInfo?.mealName,
+                            }, 
+                            unit_amount: paymentInfo?.price * 100,
+                        },
+                        quantity: paymentInfo?.quantity,
+                    },
+                ],
+                mode: 'payment',
+                customer_email: paymentInfo?.customer?.email,
+                metadata: {
+                    mealId: paymentInfo?.mealId,
+                    customerName: paymentInfo?.customer.email
+                },
+                success_url: `${process.env.CLIENT_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.CLIENT_DOMAIN}/dashboard/payment-cancel`,
+            })
+            res.send({ url: session.url })
+        })
 
         // Send a ping to confirm a successful connection
         await client.db('admin').command({ ping: 1 })
