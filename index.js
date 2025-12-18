@@ -243,9 +243,55 @@ async function run() {
             }
         });
 
+        //get total payment amount
+        app.get("/payments", async (req, res) => {
+            try {
+                const payments = await paymentCollection.find().toArray();
 
+                const totalAmount = payments.reduce(
+                    (sum, payment) => sum + Number(payment.amount || 0),
+                    0
+                );
 
+                res.send({
+                    payments,
+                    totalAmount
+                });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch payments" });
+            }
+        });
 
+        //get total order of pending and delivered
+        app.get("/orders/status-count", async (req, res) => {
+            try {
+                const result = await orderCollection.aggregate([
+                    {
+                        $group: {
+                            _id: "$orderStatus",
+                            count: { $sum: 1 }
+                        }
+                    }
+                ]).toArray();
+
+                const counts = {
+                    pending: 0,
+                    accepted: 0,
+                    delivered: 0,
+                    cancelled: 0,
+                };
+
+                result.forEach(item => {
+                    counts[item._id] = item.count;
+                });
+
+                res.send(counts);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to fetch order status counts" });
+            }
+        });
 
         //Post users data
         app.post("/users", async (req, res) => {
@@ -670,30 +716,48 @@ async function run() {
 
         // payment endpoint
         app.post('/payment-success', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await stripe.checkout.sessions.retrieve(sessionId);
+            try {
+                const { sessionId } = req.body;
 
-            const meal = await orderCollection.findOne({
-                _id: new ObjectId(session.metadata.mealId)
-            })
+                const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-            const checkDuplicatePayment = await paymentCollection.findOne({
-                transactionId: session.payment_intent
-            })
+                const transactionId = session.payment_intent;
 
-            if (session.status === 'complete' && meal && !checkDuplicatePayment) {
-                const payInfo = {
-                    mealId: session.metadata.mealId,
-                    transactionId: session.payment_intent,
-                    customer: session.metadata.customer,
-                    chef: meal?.chefName,
-                    foodName: meal.mealName,
-                    price: session.amount_total / 100,
+                const alreadyPaid = await paymentCollection.findOne({
+                    transactionId,
+                });
+
+                if (alreadyPaid) {
+                    return res.send({
+                        success: false,
+                        message: "Payment already processed",
+                    });
                 }
-                const result = await paymentCollection.insertOne(payInfo)
+
+                const order = await orderCollection.findOne({
+                    _id: new ObjectId(session.metadata.mealId),
+                });
+
+                if (!order) {
+                    return res.status(404).send({ message: "Order not found" });
+                }
+
+                const paymentInfo = {
+                    orderId: order._id,
+                    transactionId,
+                    userEmail: session.customer_email,
+                    chefId: order.chefId,
+                    chefName: order.chefName,
+                    foodName: order.mealName,
+                    amount: session.amount_total / 100,
+                    paymentStatus: "paid",
+                    paymentTime: new Date(),
+                };
+
+                await paymentCollection.insertOne(paymentInfo);
 
                 await orderCollection.updateOne(
-                    { _id: new ObjectId(session.metadata.mealId) },
+                    { _id: order._id },
                     {
                         $set: {
                             paymentStatus: "paid",
@@ -701,8 +765,25 @@ async function run() {
                         },
                     }
                 );
+
+                res.send({
+                    success: true,
+                    message: "Payment successful",
+                });
+            } catch (error) {
+                console.error("Payment error:", error);
+
+                if (error.code === 11000) {
+                    return res.send({
+                        success: false,
+                        message: "Duplicate payment blocked",
+                    });
+                }
+
+                res.status(500).send({ message: "Payment processing failed" });
             }
-        })
+        });
+
 
         // Send a ping to confirm a successful connection
         await client.db('admin').command({ ping: 1 })
