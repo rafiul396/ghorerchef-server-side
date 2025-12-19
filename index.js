@@ -9,6 +9,21 @@ const port = process.env.PORT || 3000
 app.use(express.json())
 app.use(cors())
 
+// jwt middlewares
+const verifyJWT = async (req, res, next) => {
+    const token = req?.headers?.authorization?.split(' ')[1]
+    if (!token) return res.status(401).send({ message: 'Unauthorized Access!' })
+    try {
+        // const decoded = await admin.auth().verifyIdToken(token)
+        // req.tokenEmail = decoded.email
+        // console.log(decoded)
+        next()
+    } catch (err) {
+        console.log(err)
+        return res.status(401).send({ message: 'Unauthorized Access!', err })
+    }
+}
+
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(process.env.MONGODB_URI, {
     serverApi: {
@@ -30,14 +45,14 @@ async function run() {
         const paymentCollection = db.collection("payments")
 
         //get all user data for admin
-        app.get("/users", async (req, res) => {
+        app.get("/users", verifyJWT, async (req, res) => {
             const cursor = userCollection.find();
             const result = await cursor.toArray();
             res.send(result);
         });
 
         //get single users data
-        app.get("/users/:email", async (req, res) => {
+        app.get("/users/:email", verifyJWT, async (req, res) => {
             const email = req.params.email;
 
             const query = { userEmail: email }
@@ -47,9 +62,9 @@ async function run() {
         });
 
         //get meals
-        app.get("/meals", async (req, res) => {
+        app.get("/meals", verifyJWT, async (req, res) => {
             try {
-                const email = req.query.email;
+                const email = req.query.email;                
 
                 const query = {};
                 if (email) {
@@ -64,7 +79,7 @@ async function run() {
         });
 
         //get top 6 data by review
-        app.get("/meals/top-rated", async (req, res) => {
+        app.get("/meals/top-rated", verifyJWT, async (req, res) => {
             try {
                 const result = await mealsCollection
                     .find()
@@ -79,7 +94,7 @@ async function run() {
         });
 
         //get single meal data
-        app.get("/meals/:id", async (req, res) => {
+        app.get("/meals/:id", verifyJWT, async (req, res) => {
             try {
                 const id = req.params.id;
 
@@ -99,7 +114,7 @@ async function run() {
         });
 
         //get orders by user email
-        app.get("/orders", async (req, res) => {
+        app.get("/orders", verifyJWT, async (req, res) => {
             try {
                 const email = req.query.email;
 
@@ -120,7 +135,7 @@ async function run() {
         });
 
         //get order by chefId
-        app.get("/orders/chef", async (req, res) => {
+        app.get("/orders/chef", verifyJWT, async (req, res) => {
             try {
                 const { chefId } = req.query;
 
@@ -142,7 +157,7 @@ async function run() {
 
 
         //get requests
-        app.get("/requests", async (req, res) => {
+        app.get("/requests", verifyJWT, async (req, res) => {
             try {
                 const result = await requestCollection
                     .find()
@@ -156,7 +171,7 @@ async function run() {
         });
 
         //get reviews
-        app.get("/reviews", async (req, res) => {
+        app.get("/reviews", verifyJWT, async (req, res) => {
             try {
                 const { foodId, email } = req.query;
 
@@ -189,7 +204,7 @@ async function run() {
         });
 
         //get all reviews
-        app.get("/reviews/all", async (req, res) => {
+        app.get("/reviews/all", verifyJWT, async (req, res) => {
             try {
                 const reviews = await reviewCollection
                     .find()
@@ -205,7 +220,7 @@ async function run() {
 
 
         //get favorite data
-        app.get("/favorites", async (req, res) => {
+        app.get("/favorites", verifyJWT, async (req, res) => {
             try {
                 const { email } = req.query;
 
@@ -225,7 +240,7 @@ async function run() {
         });
 
         //get favorite count for single food
-        app.get("/favorites/count", async (req, res) => {
+        app.get("/favorites/count", verifyJWT, async (req, res) => {
             try {
                 const { mealId } = req.query;
 
@@ -244,7 +259,7 @@ async function run() {
         });
 
         //get total payment amount
-        app.get("/payments", async (req, res) => {
+        app.get("/payments", verifyJWT, async (req, res) => {
             try {
                 const payments = await paymentCollection.find().toArray();
 
@@ -264,7 +279,7 @@ async function run() {
         });
 
         //get total order of pending and delivered
-        app.get("/orders/status-count", async (req, res) => {
+        app.get("/orders/status-count", verifyJWT, async (req, res) => {
             try {
                 const result = await orderCollection.aggregate([
                     {
@@ -294,7 +309,7 @@ async function run() {
         });
 
         //Post users data
-        app.post("/users", async (req, res) => {
+        app.post("/users", verifyJWT, async (req, res) => {
             const users = req.body;
             users.userRole = "user"
             users.userStatus = "active"
@@ -304,7 +319,7 @@ async function run() {
         })
 
         //post order
-        app.post("/orders", async (req, res) => {
+        app.post("/orders", verifyJWT, async (req, res) => {
             try {
                 const meals = req.body;
                 const totalPrice = Number(meals.foodPrice) * Number(meals.quantity);
@@ -321,7 +336,7 @@ async function run() {
 
 
         //chef can post her meals
-        app.post("/meals", async (req, res) => {
+        app.post("/meals", verifyJWT, async (req, res) => {
             const meals = req.body;
             meals.createdAt = new Date();
             const result = await mealsCollection.insertOne(meals);
@@ -329,7 +344,7 @@ async function run() {
         })
 
         //post requests
-        app.post("/requests", async (req, res) => {
+        app.post("/requests", verifyJWT, async (req, res) => {
             try {
                 const { userEmail, requestType } = req.body;
 
@@ -415,7 +430,7 @@ async function run() {
         //     }
         // });
 
-        app.post("/reviews", async (req, res) => {
+        app.post("/reviews", verifyJWT, async (req, res) => {
             try {
                 const {
                     foodId,
@@ -458,7 +473,7 @@ async function run() {
         });
 
         //post favorite meals
-        app.post("/favorites", async (req, res) => {
+        app.post("/favorites", verifyJWT, async (req, res) => {
             try {
                 const { userEmail, mealId } = req.body;
 
@@ -485,7 +500,7 @@ async function run() {
 
 
         //updated meals data by chef
-        app.put("/meals/:id", async (req, res) => {
+        app.put("/meals/:id", verifyJWT, async (req, res) => {
             const id = req.params.id;
             const updatedData = req.body;
 
@@ -499,7 +514,7 @@ async function run() {
 
         //updated user role by admin
         //request reject
-        app.patch("/requests/accept/:id", async (req, res) => {
+        app.patch("/requests/accept/:id", verifyJWT, async (req, res) => {
             const { id } = req.params;
             const request = await requestCollection.findOne({ _id: new ObjectId(id) });
 
@@ -539,7 +554,7 @@ async function run() {
         });
 
         //change user status active to fraud
-        app.patch("/users/fraud/:id", async (req, res) => {
+        app.patch("/users/fraud/:id", verifyJWT, async (req, res) => {
             try {
                 const { id } = req.params;
 
@@ -558,7 +573,7 @@ async function run() {
 
 
         //request reject
-        app.patch("/requests/reject/:id", async (req, res) => {
+        app.patch("/requests/reject/:id", verifyJWT, async (req, res) => {
             const { id } = req.params;
 
             await requestCollection.updateOne(
@@ -598,7 +613,7 @@ async function run() {
 
 
         //updated order status by chef
-        app.patch("/orders/:id/status", async (req, res) => {
+        app.patch("/orders/:id/status", verifyJWT, async (req, res) => {
             try {
                 const { id } = req.params;
                 const { status } = req.body;
@@ -627,7 +642,7 @@ async function run() {
         });
 
         //delete meals by chef
-        app.delete("/meals/:id", async (req, res) => {
+        app.delete("/meals/:id", verifyJWT, async (req, res) => {
             try {
                 const id = req.params.id;
 
@@ -653,7 +668,7 @@ async function run() {
         });
 
         //delete review
-        app.delete("/reviews/:id", async (req, res) => {
+        app.delete("/reviews/:id", verifyJWT, async (req, res) => {
             try {
                 const { id } = req.params;
 
@@ -672,7 +687,7 @@ async function run() {
         });
 
         //delete favorite data
-        app.delete("/favorites/:id", async (req, res) => {
+        app.delete("/favorites/:id", verifyJWT, async (req, res) => {
             try {
                 const { id } = req.params;
 
@@ -687,7 +702,7 @@ async function run() {
         });
 
         // Setup payment getway system using stripe
-        app.post("/create-checkout-session", async (req, res) => {
+        app.post("/create-checkout-session", verifyJWT, async (req, res) => {
             const paymentInfo = req.body;
             const session = await stripe.checkout.sessions.create({
                 line_items: [
@@ -715,7 +730,7 @@ async function run() {
         })
 
         // payment endpoint
-        app.post('/payment-success', async (req, res) => {
+        app.post('/payment-success', verifyJWT, async (req, res) => {
             try {
                 const { sessionId } = req.body;
 
