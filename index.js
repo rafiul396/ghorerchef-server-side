@@ -62,7 +62,7 @@ async function run() {
         });
 
         //get meals
-        app.get("/meals", verifyJWT, async (req, res) => {
+        app.get("/meals", async (req, res) => {
             try {
                 const email = req.query.email;                
 
@@ -79,7 +79,7 @@ async function run() {
         });
 
         //get top 6 data by review
-        app.get("/meals/top-rated", verifyJWT, async (req, res) => {
+        app.get("/meals/top-rated", async (req, res) => {
             try {
                 const result = await mealsCollection
                     .find()
@@ -204,7 +204,7 @@ async function run() {
         });
 
         //get all reviews
-        app.get("/reviews/all", verifyJWT, async (req, res) => {
+        app.get("/reviews/all", async (req, res) => {
             try {
                 const reviews = await reviewCollection
                     .find()
@@ -801,10 +801,10 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        await client.db('admin').command({ ping: 1 })
-        console.log(
-            'Pinged your deployment. You successfully connected to MongoDB!'
-        )
+        // await client.db('admin').command({ ping: 1 })
+        // console.log(
+        //     'Pinged your deployment. You successfully connected to MongoDB!'
+        // )
     } finally {
         // Ensures that the client will close when you finish/error
     }
