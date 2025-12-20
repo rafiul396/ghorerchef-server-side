@@ -6,6 +6,15 @@ const cors = require('cors')
 const app = express()
 const port = process.env.PORT || 3000
 
+const admin = require("firebase-admin");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
 app.use(express.json())
 app.use(cors())
 
@@ -14,8 +23,7 @@ const verifyJWT = async (req, res, next) => {
     const token = req?.headers?.authorization?.split(' ')[1]
     if (!token) return res.status(401).send({ message: 'Unauthorized Access!' })
     try {
-        // const decoded = await admin.auth().verifyIdToken(token)
-        // req.tokenEmail = decoded.email
+        const decoded = await admin.auth().verifyIdToken(token)
         // console.log(decoded)
         next()
     } catch (err) {
@@ -61,19 +69,40 @@ async function run() {
             res.send(result);
         });
 
-        //get meals
+        //get meals by pagination
         app.get("/meals", async (req, res) => {
             try {
-                const email = req.query.email;                
+                const email = req.query.email;
+
+                const page = parseInt(req.query.page) || 1;   
+                const limit = parseInt(req.query.limit) || 10; 
+                const skip = (page - 1) * limit;
 
                 const query = {};
                 if (email) {
                     query.userEmail = email;
                 }
 
-                const result = await mealsCollection.find(query).toArray();
-                res.send(result);
+                const total = await mealsCollection.countDocuments(query);
+
+                const result = await mealsCollection
+                    .find(query)
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray();
+
+                res.send({
+                    meals: result,
+                    pagination: {
+                        currentPage: page,
+                        totalPages: Math.ceil(total / limit),
+                        totalMeals: total,
+                        hasNextPage: page < Math.ceil(total / limit),
+                        hasPrevPage: page > 1,
+                    },
+                });
             } catch (error) {
+                console.error("Error fetching meals:", error);
                 res.status(500).send({ message: "Failed to fetch meals" });
             }
         });
