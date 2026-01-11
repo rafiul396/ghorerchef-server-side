@@ -74,8 +74,8 @@ async function run() {
             try {
                 const email = req.query.email;
 
-                const page = parseInt(req.query.page) || 1;   
-                const limit = parseInt(req.query.limit) || 10; 
+                const page = parseInt(req.query.page) || 1;
+                const limit = parseInt(req.query.limit) || 10;
                 const skip = (page - 1) * limit;
 
                 const query = {};
@@ -667,6 +667,32 @@ async function run() {
             } catch (error) {
                 console.error(error);
                 res.status(500).send({ message: "Failed to update order status" });
+            }
+        });
+
+        app.patch('/users/:email', async (req, res) => {
+            const { email } = req.params;
+            const { userName, userPhoto, userAddress } = req.body;
+
+            const updateDoc = {
+                $set: {
+                    userName: userName,
+                    userPhoto: userPhoto,
+                    userAddress: userAddress,
+                    updatedAt: new Date(),
+                },
+            };
+
+            console.log(email, updateDoc);
+            
+
+            const result = await userCollection.updateOne({ userEmail : email }, updateDoc);
+            
+
+            if (result.modifiedCount > 0) {
+                res.send({ success: true });
+            } else {
+                res.status(400).send({ success: false });
             }
         });
 
