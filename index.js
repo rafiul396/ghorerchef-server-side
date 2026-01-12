@@ -70,26 +70,107 @@ async function run() {
         });
 
         //get meals by pagination
+        // app.get("/meals", async (req, res) => {
+        //     try {
+        //         const email = req.query.email;
+
+        //         const page = parseInt(req.query.page) || 1;
+        //         const limit = parseInt(req.query.limit) || 10;
+        //         const skip = (page - 1) * limit;
+
+        //         const query = {};
+        //         if (email) {
+        //             query.userEmail = email;
+        //         }
+
+        //         const total = await mealsCollection.countDocuments(query);
+
+        //         const result = await mealsCollection
+        //             .find(query)
+        //             .skip(skip)
+        //             .limit(limit)
+        //             .toArray();
+
+        //         res.send({
+        //             meals: result,
+        //             pagination: {
+        //                 currentPage: page,
+        //                 totalPages: Math.ceil(total / limit),
+        //                 totalMeals: total,
+        //                 hasNextPage: page < Math.ceil(total / limit),
+        //                 hasPrevPage: page > 1,
+        //             },
+        //         });
+        //     } catch (error) {
+        //         console.error("Error fetching meals:", error);
+        //         res.status(500).send({ message: "Failed to fetch meals" });
+        //     }
+        // });
+
         app.get("/meals", async (req, res) => {
             try {
-                const email = req.query.email;
-
                 const page = parseInt(req.query.page) || 1;
                 const limit = parseInt(req.query.limit) || 10;
                 const skip = (page - 1) * limit;
 
+                // Dynamic query তৈরি
                 const query = {};
-                if (email) {
-                    query.userEmail = email;
+
+                // Search logic
+                if (req.query.search && req.query.search.trim() !== "") {
+                    const searchRegex = new RegExp(req.query.search.trim(), "i");
+                    query.$or = [
+                        { foodName: searchRegex },
+                        { chefName: searchRegex },
+                        // আরও ফিল্ড যোগ করতে পারো
+                    ];
                 }
 
-                const total = await mealsCollection.countDocuments(query);
+                // Delivery Area filter (exact match)
+                if (req.query.deliveryArea) {
+                    query.deliveryArea = req.query.deliveryArea;
+                }
 
-                const result = await mealsCollection
-                    .find(query)
-                    .skip(skip)
-                    .limit(limit)
-                    .toArray();
+                // Sorting logic
+                let sortOption = { createdAt: -1 }; // default newest first
+
+                if (req.query.sort) {
+                    switch (req.query.sort) {
+                        case "price-asc":
+                            sortOption = { priceNum: 1 }; // আমরা পরে priceNum তৈরি করব
+                            break;
+                        case "price-desc":
+                            sortOption = { priceNum: -1 };
+                            break;
+                        case "rating-desc":
+                            sortOption = { rating: -1 };
+                            break;
+                        default:
+                            sortOption = { createdAt: -1 };
+                    }
+                }
+
+                // Aggregate pipeline
+                const pipeline = [
+                    { $match: query },
+                    // price string হলে number-এ কনভার্ট করা (যাতে sort ঠিক হয়)
+                    {
+                        $addFields: {
+                            priceNum: { $toDouble: "$price" }, // price string → number
+                        },
+                    },
+                    { $sort: sortOption },
+                    { $skip: skip },
+                    { $limit: limit },
+                    // temporary priceNum field remove করা (frontend-এ দরকার নেই)
+                    { $project: { priceNum: 0 } },
+                ];
+
+                // Data fetch
+                const result = await mealsCollection.aggregate(pipeline).toArray();
+
+                // Total count (ফিল্টার অ্যাপ্লাই করে)
+                const total = await mealsCollection.countDocuments(query);
 
                 res.send({
                     meals: result,
@@ -106,6 +187,55 @@ async function run() {
                 res.status(500).send({ message: "Failed to fetch meals" });
             }
         });
+
+
+        // app.get("/meals", async (req, res) => {
+        //     try {
+        //         const page = parseInt(req.query.page) || 1;
+        //         const limit = parseInt(req.query.limit) || 10;
+        //         const skip = (page - 1) * limit;
+
+        //         // Dynamic query তৈরি করা
+        //         const query = {};
+
+        //         // Search logic (meal name বা chef name-এ partial match, case-insensitive)
+        //         if (req.query.search && req.query.search.trim() !== '') {
+        //             const searchRegex = new RegExp(req.query.search.trim(), 'i'); // 'i' = case-insensitive
+        //             query.$or = [
+        //                 { mealName: searchRegex },   // তোমার collection-এ mealName ফিল্ড আছে ধরে নেয়া হচ্ছে
+        //                 { chefName: searchRegex },   // chef name-এও খুঁজবে
+        //                 // চাইলে আরও ফিল্ড যোগ করতে পারো যেমন: { description: searchRegex }
+        //             ];
+        //         }
+
+        //         // অন্য ফিল্টার যোগ করতে চাইলে এখানে যোগ করো (যেমন deliveryArea)
+
+        //         // Total count (ফিল্টার অ্যাপ্লাই করে)
+        //         const total = await mealsCollection.countDocuments(query);
+
+        //         // Data fetch with sort (default newest first)
+        //         const result = await mealsCollection
+        //             .find(query)
+        //             .sort({ createdAt: -1 })  // optional: newest first
+        //             .skip(skip)
+        //             .limit(limit)
+        //             .toArray();
+
+        //         res.send({
+        //             meals: result,
+        //             pagination: {
+        //                 currentPage: page,
+        //                 totalPages: Math.ceil(total / limit),
+        //                 totalMeals: total,
+        //                 hasNextPage: page < Math.ceil(total / limit),
+        //                 hasPrevPage: page > 1,
+        //             },
+        //         });
+        //     } catch (error) {
+        //         console.error("Error fetching meals:", error);
+        //         res.status(500).send({ message: "Failed to fetch meals" });
+        //     }
+        // });
 
         //get top 6 data by review
         app.get("/meals/top-rated", async (req, res) => {
@@ -684,10 +814,10 @@ async function run() {
             };
 
             console.log(email, updateDoc);
-            
 
-            const result = await userCollection.updateOne({ userEmail : email }, updateDoc);
-            
+
+            const result = await userCollection.updateOne({ userEmail: email }, updateDoc);
+
 
             if (result.modifiedCount > 0) {
                 res.send({ success: true });
