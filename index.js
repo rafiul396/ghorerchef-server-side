@@ -123,7 +123,7 @@ async function run() {
         });
 
         //get single meal data
-        app.get("/meals/:id", verifyJWT, async (req, res) => {
+        app.get("/meals/:id", async (req, res) => {
             try {
                 const id = req.params.id;
 
