@@ -122,6 +122,7 @@ async function run() {
                     query.$or = [
                         { foodName: searchRegex },
                         { chefName: searchRegex },
+                        { deliveryArea: searchRegex },
                         // আরও ফিল্ড যোগ করতে পারো
                     ];
                 }
